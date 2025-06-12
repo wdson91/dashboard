@@ -1,0 +1,9 @@
+asgiref==3.8.1
+defusedxml==0.7.1
+Django==5.2.3
+djangorestframework==3.16.0
+fonttools==4.58.2
+fpdf2==2.8.3
+pillow==11.2.1
+sqlparse==0.5.3
+whitenoise==6.9.0
