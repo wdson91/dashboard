@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Faturas{% endblock %}
+{% block content %}
+
+
+<form method="POST" enctype="multipart/form-data">
+  {% csrf_token %}
+
+  
+  <h2>Foto de Perfil</h2>
+  {{ profile_form.as_p }}
+
+  <h2>Dados do Usuário</h2>
+  {{ user_form.as_p }}
+
+  <button type="submit">Salvar Alterações</button>
+</form>
+
+{% if user.profile.photo %}
+  <img src="{{ user.profile.photo.url }}" alt="Foto de perfil" width="150" style="border-radius: 50%;">
+{% endif %}
+
+
+{% endblock %}
