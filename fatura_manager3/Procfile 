@@ -1,1 +1,0 @@
-web: gunicorn fatura_manager.wsgi:application
