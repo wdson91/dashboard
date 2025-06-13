@@ -1,112 +1,82 @@
 {% extends 'base.html' %}
+{% load widget_tweaks %}
 
 {% block title %}Minha Conta{% endblock %}
 
 {% block content %}
-<style>
-  /* Oculta o label "Photo:" */
-  label[for="id_photo"] {
-    display: none;
-  }
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
 
-  /* Oculta o link "Currently: ..." */
-  input#id_photo ~ a {
-    display: none;
-  }
+      >
+        <div class="card-header text-center bg-white">
+          <h4 class="mb-0">Minha Conta</h4>
+        </div>
+        <div class="card-body">
+          <form method="POST" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
 
-  /* Oculta o <br> depois do link */
-  input#id_photo ~ a + br {
-    display: none;
-  }
+            {% if user.profile.photo_url %}
+              <div class="text-center mb-4">
+                <img src="{{ user.profile.photo_url }}" alt="Foto de perfil"
+                     class="rounded-circle border"
+                     style="width: 150px; height: 150px; object-fit: cover;">
+              </div>
+            {% endif %}
 
-  /* Estilo da imagem de perfil */
-  .profile-photo {
-    display: block;
-    margin: 1rem auto;
-    border-radius: 50%;
-    width: 150px;
-    height: 150px;
-    object-fit: cover;
-    border: 2px solid #ccc;
-  }
+            <fieldset class="mb-4">
+              <legend class="h6">📷 Foto de Perfil</legend>
+              <div class="mb-3">
+                <input type="file" name="{{ profile_form.photo.html_name }}"
+                       class="form-control" id="{{ profile_form.photo.id_for_label }}">
+                {% if profile_form.photo.errors %}
+                  <div class="text-danger small">{{ profile_form.photo.errors|striptags }}</div>
+                {% endif %}
+              </div>
 
-  form {
-    max-width: 600px;
-    margin: auto;
-    padding: 1rem;
-    background-color: #f9f9f9;
-    border-radius: 12px;
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
-  }
+              {% for field in profile_form %}
+                {% if field.name != "photo" %}
+                  <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field|add_class:"form-control" }}
+                    {% if field.help_text %}
+                      <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% if field.errors %}
+                      <div class="text-danger small">{{ field.errors|striptags }}</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </fieldset>
 
-  fieldset {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-  }
+            <fieldset class="mb-4">
+              <legend class="h6">👤 Dados do Usuário</legend>
+              {% for field in user_form %}
+                <div class="mb-3">
+                  <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                  {{ field|add_class:"form-control" }}
+                  {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                  {% endif %}
+                  {% if field.errors %}
+                    <div class="text-danger small">{{ field.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </fieldset>
 
-  legend {
-    font-weight: bold;
-    padding: 0 0.5rem;
-  }
+            <button type="submit" class="btn btn-primary w-100">💾 Salvar</button>
+          </form>
 
-  button[type="submit"] {
-    padding: 0.6rem 1.2rem;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.3s ease;
-  }
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'password_change' %}" class="btn btn-outline-secondary">🔒 Trocar senha</a>
+            <a href="{% url 'logout' %}" class="btn btn-danger">🚪 Sair</a>
+          </div>
+        </div>
+      
 
-  button[type="submit"]:hover {
-    background-color: #0056b3;
-  }
-
-  /* Botão logout como link estilizado */
-  .btn-logout {
-    display: block;
-    margin: 1rem auto;
-    padding: 0.6rem 1.2rem;
-    background-color: #dc3545;
-    color: white;
-    text-align: center;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 1rem;
-    width: max-content;
-  }
-
-  .btn-logout:hover {
-    background-color: #a71d2a;
-  }
-</style>
-
-<h2>Minha Conta</h2>
-
-<form method="POST" enctype="multipart/form-data">
-  {% csrf_token %}
-
-  {% if user.profile.photo %}
-    <img src="{{ user.profile.photo.url }}" alt="Foto de perfil" class="profile-photo">
-  {% endif %}
-
-  <fieldset>
-    <legend>Foto de Perfil</legend>
-    {{ profile_form.as_p }}
-  </fieldset>
-
-  <fieldset>
-    <legend>Dados do Usuário</legend>
-    {{ user_form.as_p }}
-  </fieldset>
-
-  <button type="submit">Salvar</button>
-</form>
-
-<a href="{% url 'logout' %}" class="btn-logout">Sair</a>
-
+    </div>
+  </div>
+</div>
 {% endblock %}

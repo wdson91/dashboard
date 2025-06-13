@@ -5,7 +5,7 @@ from .forms import UserUpdateForm
 from django.urls import reverse
 from django.contrib.auth.models import User
 from faturas.forms import ProfileForm
-
+from faturas.utils.supabase import upload_image_to_supabase
 
 def logout_view(request):
     logout(request)
@@ -31,7 +31,15 @@ def minha_conta(request):
 
        
             user_form.save()
-            profile_form.save()
+
+            # Upload da imagem para Supabase, se houver
+            photo = request.FILES.get('photo')
+            if photo:
+                photo_url = upload_image_to_supabase(photo)
+                profile.photo_url = photo_url
+
+            profile.save()
+            #profile_form.save()
             return redirect(reverse('minha-conta'))
     else:
         user_form = UserUpdateForm(instance=user)

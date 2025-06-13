@@ -153,3 +153,5 @@ def parse_faturas(texto_completo):
        
 
     return lista_faturas
+
+

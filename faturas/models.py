@@ -25,7 +25,7 @@ class Fatura(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)  # liga ao usuário
     photo = models.ImageField(upload_to='profile_photos/', default='default.jpg')  # campo da foto
-
+    photo_url = models.URLField(blank=True, null=True)  # salva a URL da foto no Supabase   
     def __str__(self):
         return self.user.username
 

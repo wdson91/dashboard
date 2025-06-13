@@ -8,7 +8,7 @@ from io import BytesIO
 from django.http import FileResponse
 from .models import Fatura
 from .serializers import FaturaSerializer, UploadFaturaSerializer
-from .utils import parse_faturas
+from .utils.parse_faturas import parse_faturas
 from collections import defaultdict
 from datetime import date, timedelta
 from django.views.decorators.csrf import csrf_exempt
@@ -27,8 +27,16 @@ class FaturaListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Fatura.objects.filter(usuario=user).order_by('-data', '-hora')
+        queryset = Fatura.objects.filter(usuario=user).order_by('-data', '-hora')
 
+        # Pega o NIF opcional da query string
+        nif = self.request.query_params.get('nif')
+        if nif:
+            queryset = queryset.filter(cliente__nif=nif)  # ajusta o campo conforme seu modelo
+
+        
+        return queryset
+    
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user)
 

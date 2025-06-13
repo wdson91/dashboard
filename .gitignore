@@ -63,9 +63,8 @@ media/
 .DS_Store
 Thumbs.db
 *.Identifier
-*.Identifier
-*.Identifier
-*.Identifier
-*.Identifier
+
 *.fatura_manager/__init__.py:Zone.Identifier
 .env
+
+*.Identifier
