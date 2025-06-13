@@ -1,0 +1,201 @@
+
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+{% if user.is_authenticated %}
+<p>Bem-vindo, {{ user.first_name|default:user.username }}! </p>
+
+<div class="section">
+    <h2>Estatísticas</h2>
+
+    <!-- Filtro por data -->
+    <div class="row">
+       <div class="d-flex align-items-center flex-wrap  justify-content-start">
+  <input type="date" id="dataInicio" class="form-control"onchange="aplicarFiltro()" style="max-width: 180px;" placeholder="Data inicial">
+  <span>até</span>
+  <input type="date" id="dataFim" class="form-control"onchange="aplicarFiltro()" style="max-width: 180px;" placeholder="Data final">
+  <button class="btn btn-outline-primary btn-sm" onclick="aplicarFiltro()">Filtrar</button>
+  <button class="btn btn-outline-secondary btn-sm" onclick="limparFiltro()">Limpar</button>
+</div>
+
+    </div>
+    <div id="filtro-info" class="mb-3 text-muted fw-bold"></div>
+    <!-- Cards -->
+    <div class="row" id="stats">
+        <p>Carregando estatísticas...</p>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="mt-5">
+        <h5>Gráfico de Vendas por Dia</h5>
+        
+        <canvas id="vendasChart" height="300"></canvas>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let chartInstance = null;
+function formatarData(data) {
+                const [ano, mes, dia] = data.split("-");
+                return `${dia}/${mes}/${ano}`;
+            }
+function loadStats() {
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+   
+    let url = '/api/stats/';
+    const params = [];
+    if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+    if (dataFim) params.push(`data_fim=${dataFim}`);
+    if (params.length) url += '?' + params.join('&');
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            
+           const filtroInfo = document.getElementById('filtro-info');
+        if (dataInicio && dataFim) {
+            filtroInfo.innerHTML = `<p>Filtrando de ${formatarData(dataInicio)} até ${formatarData(dataFim)}</p>`;
+        } else if (dataInicio) {
+            filtroInfo.innerHTML = `<p>Filtrando a partir de ${formatarData(dataInicio)}</p>`;
+        } else if (dataFim) {
+            filtroInfo.innerHTML = `<p>Filtrando até ${formatarData(dataFim)}</p>`;
+        } else {
+            filtroInfo.innerHTML = `<p>Mostrando todos os dados disponíveis</p>`;
+        }
+
+
+            const statsDiv = document.getElementById('stats');
+
+            // Cards
+            let html = `
+                <div class="col-md-3 mx-auto">
+                    <div class="card text-white bg-primary">
+                        <div class="card-body">
+                            <h5 class="card-title">Total de Vendas</h5>
+                            <p class="card-text">€ ${data.total_vendas.toFixed(2)}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3  mx-auto">
+                    <div class="card text-white bg-success">
+                        <div class="card-body">
+                            <h5 class="card-title">Itens Vendidos</h5>
+                            <p class="card-text">${data.total_itens}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3  mx-auto">
+                    <div class="card text-white bg-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">Quantidade de Faturas</h5>
+                            <p class="card-text">${data.quantidade_faturas}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            html += `
+                <div class="mt-4 col-12">
+                    <h5>Vendas por Produto</h5>
+                    <ul class="list-group scrollable-list">
+            `;
+
+
+            if (Object.keys(data.vendas_por_produto).length === 0) {
+                html += '<li class="list-group-item">Nenhum dado disponível.</li>';
+            } else {
+                for (const [produto, quantidade] of Object.entries(data.vendas_por_produto)) {
+                    html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                ${produto}
+                                <span class="badge bg-secondary">${quantidade} un</span>
+                             </li>`;
+                }
+            }
+
+            html += '</ul></div>';
+            statsDiv.innerHTML = html;
+
+            // Gráfico
+            renderChart(data.vendas_por_dia || {});
+        })
+        .catch(error => {
+            console.error('Erro ao carregar estatísticas:', error);
+            document.getElementById('stats').innerHTML = '<p class="text-danger">Erro ao carregar estatísticas.</p>';
+        });
+}
+
+function renderChart(vendasPorDia) {
+    const ctx = document.getElementById('vendasChart').getContext('2d');
+
+    const labels = Object.keys(vendasPorDia);
+    const values = Object.values(vendasPorDia);
+
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Vendas por Dia (€)',
+                data: values,
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Data' }},
+                y: { title: { display: true, text: 'Valor (€)' }}
+            }
+        }
+    });
+}
+function aplicarFiltro() {
+    const inicio = document.getElementById('dataInicio').value;
+    const fim = document.getElementById('dataFim').value;
+
+    if (inicio && fim && inicio > fim) {
+        alert('Data inicial não pode ser maior que a final');
+        if (inicio > fim) {
+           document.getElementById('dataFim').value = '';
+            return;
+
+        }
+        document.getElementById('dataInicio').value = '';
+        
+        return;
+    }
+
+    loadStats();
+}
+
+function limparFiltro() {
+    document.getElementById('dataInicio').value = '';
+    document.getElementById('dataFim').value = '';
+    loadStats();  // carregar tudo sem filtro
+}
+
+document.addEventListener('DOMContentLoaded', loadStats);
+</script>
+
+{% else %}
+<div class="section">
+    <p>Por favor, <a href="{% url 'login' %}">faça login</a> para acessar o sistema.</p>
+</div>
+{% endif %}
+{% endblock %}

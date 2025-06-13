@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Faturas{% endblock %}
+{% block content %}
+
+ {% if user.is_authenticated %}
+        <p>Bem-vindo, {{ user.username }}! <a href="{% url 'logout' %}" class="logout-link">Sair</a></p>
+
+ <div class="section">
+            <h2>Minhas Faturas</h2>
+            <div class="input-group" style="max-width: 350px;">
+           <input type="text" id="nifInput" class="form-control" placeholder="Buscar por NIF"
+       oninput="onNifChange()">
+
+            <button class="btn btn-primary" onclick="buscarPorNIF()">Buscar</button>
+            </div>
+            <div id="faturasList">
+                <p>Carregando faturas...</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Upload de Fatura</h2>
+            <form id="uploadForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" name="file" accept=".txt" required>
+                <button type="submit">Enviar</button>
+            </form>
+            <div id="message" class="message"></div>
+        </div>
+{% else %}
+        <div class="section">
+            <p>Por favor, <a href="{% url 'login' %}">faça login</a> para acessar o sistema.</p>
+        </div>
+    {% endif %}
+
+ 
+<script>
+// Função para buscar o token CSRF
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Manipulador de upload de faturas
+            document.getElementById('uploadForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData();
+                const fileInput = document.querySelector('input[type="file"]');
+                const csrftoken = getCookie('csrftoken');
+                
+                formData.append('file', fileInput.files[0]);
+                
+            fetch('/api/upload/', {
+    method: 'POST',
+    body: formData,
+    headers: {
+        'X-CSRFToken': csrftoken
+    }
+})
+.then(async response => {
+    const data = await response.json();
+    
+    if (response.ok == false) {
+    // A API retornou erro, lança a mensagem do backend para o catch
+        throw data;
+     }
+
+    // Sucesso
+    showMessage('success', 'Fatura processada com sucesso!');
+    fileInput.value = '';
+    loadFaturas();
+})
+.catch(error => {
+    // Captura o erro retornado do backend
+    console.log(error)
+    const errorMsg = error?.erro || 'Erro ao processar a fatura';
+    showMessage('error', errorMsg);
+});
+
+
+                
+            });
+            function showMessage(type, text) {
+                const messageDiv = document.getElementById('message');
+                messageDiv.textContent = text;
+                messageDiv.className = 'message ' + type;
+                setTimeout(() => {
+                    messageDiv.textContent = '';
+                    messageDiv.className = 'message';
+                }, 5000);
+            }
+
+            function onNifChange() {
+    const nif = document.getElementById('nifInput').value.trim();
+    if (nif === '') {
+        loadFaturas(); // Sem filtro se campo estiver vazio
+    }
+}
+
+  document.addEventListener('DOMContentLoaded', function() {
+                loadFaturas();
+                
+            });
+
+function loadFaturas(nif = '') {
+    let url = '/api/faturas/';
+    if (nif) {
+        url += `?nif=${encodeURIComponent(nif)}`;
+    }
+
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+        const faturasDiv = document.getElementById('faturasList');
+
+        if (data.length === 0) {
+            faturasDiv.innerHTML = '<p>Nenhuma fatura encontrada.</p>';
+            return;
+        }
+
+        let html = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Número</th>
+                        <th class="mobile-hidden">Data</th>
+                        <th class="mobile-hidden">Hora</th>
+                        <th class="mobile-hidden">Total</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.forEach(fatura => {
+            html += `
+                <tr>
+                    <td>${fatura.numero_fatura}</td>
+                    <td class="mobile-hidden">${fatura.data}</td>
+                    <td class="mobile-hidden">${fatura.hora}</td>
+                    <td class="mobile-hidden">€ ${fatura.total}</td>
+                    <td>
+                        <a href="/api/faturas/${fatura.numero_fatura}/pdf/" target="_blank">PDF</a>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `
+                </tbody>
+            </table>
+        `;
+
+        faturasDiv.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Erro ao carregar faturas:', error);
+        document.getElementById('faturasList').innerHTML = '<p class="error">Erro ao carregar faturas.</p>';
+    });
+}
+
+function buscarPorNIF() {
+    const nif = document.getElementById('nifInput').value.trim();
+    loadFaturas(nif);
+}
+
+// Chama no carregamento da página
+document.addEventListener('DOMContentLoaded', () => {
+    loadFaturas();
+});
+
+
+
+</script>
+
+
+{% endblock%}

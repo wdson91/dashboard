@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Minha Conta{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+
+      >
+        <div class="card-header text-center bg-white">
+          <h4 class="mb-0">Minha Conta</h4>
+        </div>
+        <div class="card-body">
+          <form method="POST" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            {% if user.profile.photo_url %}
+              <div class="text-center mb-4">
+                <img src="{{ user.profile.photo_url }}" alt="Foto de perfil"
+                     class="rounded-circle border"
+                     style="width: 150px; height: 150px; object-fit: cover;">
+              </div>
+            {% endif %}
+
+            <fieldset class="mb-4">
+              <legend class="h6">📷 Foto de Perfil</legend>
+              <div class="mb-3">
+                <input type="file" name="{{ profile_form.photo.html_name }}"
+                       class="form-control" id="{{ profile_form.photo.id_for_label }}">
+                {% if profile_form.photo.errors %}
+                  <div class="text-danger small">{{ profile_form.photo.errors|striptags }}</div>
+                {% endif %}
+              </div>
+
+              {% for field in profile_form %}
+                {% if field.name != "photo" %}
+                  <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field|add_class:"form-control" }}
+                    {% if field.help_text %}
+                      <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% if field.errors %}
+                      <div class="text-danger small">{{ field.errors|striptags }}</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </fieldset>
+
+            <fieldset class="mb-4">
+              <legend class="h6">👤 Dados do Usuário</legend>
+              {% for field in user_form %}
+                <div class="mb-3">
+                  <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                  {{ field|add_class:"form-control" }}
+                  {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                  {% endif %}
+                  {% if field.errors %}
+                    <div class="text-danger small">{{ field.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </fieldset>
+
+            <button type="submit" class="btn btn-primary w-100">💾 Salvar</button>
+          </form>
+
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'password_change' %}" class="btn btn-outline-secondary">🔒 Trocar senha</a>
+            <a href="{% url 'logout' %}" class="btn btn-danger">🚪 Sair</a>
+          </div>
+        </div>
+      
+
+    </div>
+  </div>
+</div>
+{% endblock %}
