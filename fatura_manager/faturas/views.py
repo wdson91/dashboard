@@ -12,10 +12,14 @@ from .utils import parse_faturas
 from collections import defaultdict
 from datetime import date, timedelta
 from django.views.decorators.csrf import csrf_exempt
-
+import qrcode
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .forms import ProfileForm
+from io import BytesIO
+from PIL import Image
+import tempfile
+
 
 class FaturaListCreateView(generics.ListCreateAPIView):
     serializer_class = FaturaSerializer
@@ -49,12 +53,17 @@ class UploadFaturaView(APIView):
 
         faturas_criadas = []
         erros = []
-
+        
         for dados in lista_faturas:
-            campos_obrigatorios = ['numero_fatura', 'data', 'hora', 'itens', 'total']
+            campos_obrigatorios = ['numero_fatura', 'data', 'hora', 'itens', 'total', 'qrcode', 'texto_completo']
+            # Verifica se todos os campos obrigatórios estão presentes
+            
             faltando = [campo for campo in campos_obrigatorios if campo not in dados or dados[campo] in [None, '', []]]
             if faltando:
-                erros.append({'numero_fatura': dados.get('numero_fatura', 'desconhecido'), 'erro': f'Campos faltando: {faltando}'})
+                erros.append({
+                    'numero_fatura': dados.get('numero_fatura', 'desconhecido'),
+                    'erro': f'Campos faltando: {faltando}'
+                })
                 continue
 
             numero_fatura_limpo = dados['numero_fatura'].replace("/", "_").replace(" ", "")
@@ -69,7 +78,9 @@ class UploadFaturaView(APIView):
                 data=dados['data'],
                 hora=dados['hora'],
                 total=dados['total'],
-                texto_original=text  # ou só o texto da fatura? Pode ajustar se quiser
+                texto_original=dados['texto_original'],
+                texto_completo=dados['texto_completo'],
+                qrcode=dados['qrcode']
             )
 
             for item in dados['itens']:
@@ -79,6 +90,7 @@ class UploadFaturaView(APIView):
                     preco_unitario=item['preco_unitario'],
                     total=item['total']
                 )
+
             faturas_criadas.append(fatura)
 
         serializer = FaturaSerializer(faturas_criadas, many=True)
@@ -87,6 +99,8 @@ class UploadFaturaView(APIView):
             'faturas': serializer.data,
             'erros': erros
         }, status=status.HTTP_201_CREATED if faturas_criadas else status.HTTP_400_BAD_REQUEST)
+
+
 
 class FaturaPDFView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -102,15 +116,26 @@ class FaturaPDFView(APIView):
 
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.set_font("Courier", size=11)
+        pdf.set_auto_page_break(auto=False)  # Evita quebra automática de página
+        pdf.set_font("Courier", size=12)
 
-        for linha in fatura.texto_original.splitlines():
-            pdf.cell(0, 8, txt=linha.strip(), ln=True, align='C')
+        # Escreve o conteúdo, substituindo o marcador pelo QR code
+        for linha in fatura.texto_completo.splitlines():
+            if '[[QR_CODE]]' in linha:
+                pdf.ln(2)
+                if fatura.qrcode:
+                    qr = qrcode.make(fatura.qrcode)
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_img:
+                        qr.save(tmp_img.name)
+                        tmp_img.flush()
+                        # QR Code centralizado e maior
+                        pdf.image(tmp_img.name, x=(210 - 40) / 2, w=40)  # Página A4 tem 210mm de largura
+                pdf.ln(5)
+            else:
+                pdf.cell(0, 5, txt=linha.strip(), ln=True, align='C')  # Centralizado
 
-        pdf_output = pdf.output(dest='S')  # ← retorna bytes diretamente
+        pdf_output = pdf.output(dest='S').encode('latin1')
         buffer = BytesIO(pdf_output)
-
         buffer.seek(0)
 
         return FileResponse(
@@ -119,7 +144,6 @@ class FaturaPDFView(APIView):
             filename=f"{fatura.numero_fatura}.pdf",
             content_type="application/pdf"
         )
-
 
        
 

@@ -1,12 +1,22 @@
+databases:
+  - name: faturas_db
+    plan: free
+    databaseName: faturas_db
+    user: faturas_db_user
+
 services:
   - type: web
-    name: django-app
-    env: python
     plan: free
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn fatura_manager.wsgi:application"
+    name: mysite
+    runtime: python
+    buildCommand: './build.sh'
+    startCommand: 'python -m gunicorn fatura_manager.asgi:application -k uvicorn.workers.UvicornWorker'
     envVars:
-      - key: DJANGO_SETTINGS_MODULE
-        value: fatura_manager.settings
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mysitedb
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4

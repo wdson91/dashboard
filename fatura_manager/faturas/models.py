@@ -8,7 +8,10 @@ class Fatura(models.Model):
     data = models.DateField()
     hora = models.TimeField()
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    texto_original = models.TextField()
+    texto_original = models.TextField(
+    )
+    texto_completo = models.TextField(blank=True, null=True)  # texto completo da fatura
+    qrcode = models.TextField(blank=True, null=True)  # conteúdo textual do QR code
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 

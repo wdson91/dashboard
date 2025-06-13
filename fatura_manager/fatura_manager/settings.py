@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-n(vfilfg)tak=m((n3kxo#()y4c-9(y6dnq%(yqa5o!1lkd6n7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['.onrender.com']
+ALLOWED_HOSTS = ['.onrender.com',"*"]
 
 
 # Application definition
@@ -76,12 +76,13 @@ WSGI_APPLICATION = 'fatura_manager.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+import dj_database_url
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        # Replace this value with your local database's connection string.
+        default='postgresql://faturas_db_user:kSmgBGsfk44CAosn9nkXIhllejiVKInd@dpg-d15uv515pdvs73e2gikg-a.oregon-postgres.render.com/faturas_db',
+        conn_max_age=600
+    )
 }
 
 
@@ -150,3 +151,11 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+
+
+if not DEBUG:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
