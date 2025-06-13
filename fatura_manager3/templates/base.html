@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+    <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const toggle = document.getElementById('menu-toggle');
+    const navLinks = document.getElementById('nav-links');
+
+    toggle.addEventListener('click', function () {
+      navLinks.classList.toggle('open');
+    });
+  });
+</script>
+
+<head>
+    
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gerenciador de Faturas{% endblock %}</title>
+    
+</head>
+<body>
+    <header>
+       <nav class="navbar">
+  <div class="logo">
+    <a href="/">
+    <img src="{% static 'images/Logo-POS7.png' %}" alt="Logo">
+</a>
+  </div>
+
+  <button class="menu-toggle" id="menu-toggle">☰</button>
+
+  <div class="nav-links" id="nav-links">
+    <a href="/">Dashboard</a>
+    <a href="/faturas">Faturas</a>
+   <a href="/accounts/minha_conta" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit;">
+  {% if user.profile.photo %}
+    <img src="{{ user.profile.photo.url }}" alt="Foto de perfil" 
+         style="width: 50px; height: 50px; border-radius: 50%; object-fit: contain;">
+  {% else %}
+    <!-- Se quiser um placeholder tipo ícone ou cor, pode deixar vazio ou usar um ícone -->
+    <div style="width: 50px; height: 50px; border-radius: 50%; background: gray;"></div>
+  {% endif %}
+  
+</a>
+
+  </div>
+</nav>
+
+
+    </header>
+
+    <main>
+           <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+   
+
+</body>
+</html>
