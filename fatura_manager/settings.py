@@ -73,14 +73,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fatura_manager.wsgi.application'
 
+from dotenv import load_dotenv
 
+load_dotenv()
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 import dj_database_url
 DATABASES = {
     'default': dj_database_url.config(
         # Replace this value with your local database's connection string.
-        default='postgresql://faturas_db_user:kSmgBGsfk44CAosn9nkXIhllejiVKInd@dpg-d15uv515pdvs73e2gikg-a.oregon-postgres.render.com/faturas_db',
+        #default='postgresql://faturas_db_user:kSmgBGsfk44CAosn9nkXIhllejiVKInd@dpg-d15uv515pdvs73e2gikg-a.oregon-postgres.render.com/faturas_db',
+        default=os.getenv('DB_URL'),
         conn_max_age=600
     )
 }

@@ -12,10 +12,7 @@ services:
     buildCommand: './build.sh'
     startCommand: 'python -m gunicorn fatura_manager.asgi:application -k uvicorn.workers.UvicornWorker'
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: faturas_db
-          property: connectionString
+      
       - key: SECRET_KEY
         generateValue: true
       - key: WEB_CONCURRENCY

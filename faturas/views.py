@@ -113,13 +113,15 @@ class FaturaPDFView(APIView):
                 {"erro": "Fatura não encontrada"},
                 status=status.HTTP_404_NOT_FOUND
             )
+        largura_papel = 80
 
-        pdf = FPDF()
+        pdf = FPDF(unit='mm', format=(largura_papel, 297))  # altura padrão A4, ou ajuste conforme precisar
         pdf.add_page()
-        pdf.set_auto_page_break(auto=False)  # Evita quebra automática de página
-        pdf.set_font("Courier", size=12)
+        pdf.set_auto_page_break(auto=True, margin=5)  # margens menores para papel pequeno
+        pdf.set_font("Courier", size=10)
 
-        # Escreve o conteúdo, substituindo o marcador pelo QR code
+
+      
         for linha in fatura.texto_completo.splitlines():
             if '[[QR_CODE]]' in linha:
                 pdf.ln(2)
@@ -128,13 +130,17 @@ class FaturaPDFView(APIView):
                     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_img:
                         qr.save(tmp_img.name)
                         tmp_img.flush()
-                        # QR Code centralizado e maior
-                        pdf.image(tmp_img.name, x=(210 - 40) / 2, w=40)  # Página A4 tem 210mm de largura
+                        # Centraliza o QR code no papel de 80mm
+                        largura_qrcode = 40  # pode ajustar para maior ou menor
+                        pos_x = (largura_papel - largura_qrcode) / 2
+                        pdf.image(tmp_img.name, x=pos_x, w=largura_qrcode)
                 pdf.ln(5)
             else:
-                pdf.cell(0, 5, txt=linha.strip(), ln=True, align='C')  # Centralizado
+                # Texto centralizado na largura do papel 80mm
+                pdf.cell(0, 5, txt=linha.strip(), ln=True, align='C')
 
-        pdf_output = pdf.output(dest='S').encode('latin1')
+
+        pdf_output = pdf.output(dest='S')
         buffer = BytesIO(pdf_output)
         buffer.seek(0)
 
