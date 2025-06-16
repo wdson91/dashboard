@@ -196,7 +196,7 @@ class StatsView(APIView):
             if not data_fim:
                 data_fim = ultimo_dia.isoformat()
 
-        faturas = Fatura.objects.filter(usuario=request.user)
+        faturas = Fatura.objects.filter()
 
         if isinstance(data_inicio, str) and data_inicio:
             data_inicio_parsed = parse_date(data_inicio)
