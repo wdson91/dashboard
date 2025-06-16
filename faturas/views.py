@@ -215,10 +215,14 @@ class StatsView(APIView):
             for item in fatura.itens.all()
         )
 
-        produtos = {}
+        contagem_produtos = defaultdict(int)
         for fatura in faturas:
             for item in fatura.itens.all():
-                produtos[item.nome] = produtos.get(item.nome, 0) + item.quantidade
+                contagem_produtos[item.nome] += item.quantidade
+
+        # Transformar em lista de dicionários
+        produtos = [{"produto": nome, "quantidade": qtd} for nome, qtd in contagem_produtos.items()]
+
         
         # Agrupar vendas por dia
         vendas_por_dia = defaultdict(float)
