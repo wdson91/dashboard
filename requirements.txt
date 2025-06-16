@@ -7,7 +7,7 @@ asgiref==3.8.1
 attrs==25.3.0
 Brotli==1.1.0
 certifi==2025.4.26
-click==8.2.1
+click
 defusedxml==0.7.1
 deprecation==2.1.0
 dj-database-url==3.0.0
