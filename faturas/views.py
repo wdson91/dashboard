@@ -174,7 +174,7 @@ def edit_profile(request):
     return render(request, 'profile/edit_profile.html', {'form': form})
 
 class StatsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         data_inicio = request.query_params.get("data_inicio")
