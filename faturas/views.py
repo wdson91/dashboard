@@ -19,7 +19,7 @@ from .forms import ProfileForm
 from io import BytesIO
 from PIL import Image
 import tempfile
-
+from rest_framework.permissions import AllowAny
 
 class FaturaListCreateView(generics.ListCreateAPIView):
     serializer_class = FaturaSerializer
@@ -174,7 +174,8 @@ def edit_profile(request):
     return render(request, 'profile/edit_profile.html', {'form': form})
 
 class StatsView(APIView):
-    #permission_classes = [permissions.IsAuthenticated]
+   
+    permission_classes = [AllowAny]  # <-- adiciona isso
 
     def get(self, request, *args, **kwargs):
         data_inicio = request.query_params.get("data_inicio")
