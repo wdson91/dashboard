@@ -37,13 +37,16 @@ def gerar_qrcode_texto(
         f"R:{certificado}"
     )
 
+
+
 def parse_faturas(texto_completo):
-    
-    faturas_texto = [texto_completo]  # apenas uma fatura, o texto todo
+    # Divide o texto com base no início de cada fatura
+    blocos = re.split(r"(?=Fatura-Recibo nº)", texto_completo)
+    blocos = [b.strip() for b in blocos if b.strip()]
 
     lista_faturas = []
 
-    for fatura_text in faturas_texto:
+    for fatura_text in blocos:
         fatura = {
             "numero_fatura": None,
             "data": None,
@@ -73,12 +76,10 @@ def parse_faturas(texto_completo):
             fatura["data"] = f"20{ano}-{mes}-{dia}"
             fatura["hora"] = f"{hora}:{minuto}:00"
 
-        # Captura NIFs na ordem: primeiro é emitente, segundo é cliente (ou "Consumidor final")
+        # NIFs
         nifs_encontrados = re.findall(r"N\.I\.F\.[:\s]*([0-9]{9})", fatura_text, re.IGNORECASE)
-        
         if len(nifs_encontrados) > 0:
-            if nifs_encontrados[0].isdigit():
-                fatura["nif_emitente"] = nifs_encontrados[0]
+            fatura["nif_emitente"] = nifs_encontrados[0]
         if len(nifs_encontrados) > 1:
             fatura["nif_cliente"] = nifs_encontrados[1]
 
@@ -104,53 +105,45 @@ def parse_faturas(texto_completo):
         if match_total:
             fatura["total"] = float(match_total.group(1).replace(",", "."))
 
-        # Cálculo do IVA total
+        # IVA
         iva_total = sum(item["total"] * item["taxa_iva"] for item in fatura["itens"])
         total_impostos = round(iva_total, 2)
+       
+        # Apenas gera o QR Code se a data e número da fatura foram extraídos corretamente
+        if fatura["data"] and fatura["numero_fatura"]:
+            qrcode_texto = gerar_qrcode_texto(
+                nif_emitente=fatura["nif_emitente"],
+                nif_cliente=fatura["nif_cliente"],
+                tipo_doc="FR",
+                autofaturado="N",
+                data_doc=fatura["data"].replace("-", ""),
+                numero_doc=fatura["numero_fatura"],
+                pais="PT",
+                iva_total=iva_total,
+                outros_impostos=0.00,
+                retencao=0.00,
+                total_impostos=total_impostos,
+                estado="F/eR",
+                certificado="1530"
+            )
+            fatura["qrcode"] = qrcode_texto
+        else:
+            fatura["qrcode"] = None  # ou "" se preferir
 
-        # Geração do QR Code
-        qrcode_texto = gerar_qrcode_texto(
-            nif_emitente=fatura["nif_emitente"],
-            nif_cliente=fatura["nif_cliente"],
-            tipo_doc="FR",
-            autofaturado="N",
-            data_doc=fatura["data"].replace("-", ""),
-            numero_doc=fatura["numero_fatura"],
-            pais="PT",
-            iva_total=iva_total,
-            outros_impostos=0.00,
-            retencao=0.00,
-            total_impostos=total_impostos,
-            estado="F/eR",
-            certificado="1530"
-        )
-        fatura["qrcode"] = qrcode_texto
-        # --- Separar o texto em duas partes no ATCUD ---
-        # O padrão captura a linha inteira do ATCUD
+        
+        # Inserção do QR Code após o ATCUD
         atcud_match = re.search(r"(.*?ATCUD:\s*\S+.*?\n)", fatura_text, re.DOTALL)
         if atcud_match:
-            # Divide o texto em duas partes:
-            # parte1 inclui tudo até e incluindo a linha do ATCUD
-            # parte2 é o que vem depois do ATCUD
             pos = atcud_match.end()
             parte1 = fatura_text[:pos].rstrip()
             parte2 = fatura_text[pos:].lstrip()
-            
-            # Insere o QR code entre as duas partes, com uma linha em branco antes e depois do QR code
             texto_com_qrcode = f"{parte1}\n\n[[QR_CODE]]\n\n{parte2}"
         else:
             texto_com_qrcode = f"{fatura_text}\n\n[[QR_CODE]]"
 
-        
-        # Insere QR code após campo ATCUD
-        #texto_com_qrcode = inserir_qrcode_apos_atcud(fatura_text, qrcode_texto)
-
         fatura["texto_completo"] = texto_com_qrcode
 
-      
         lista_faturas.append(fatura)
-        
-       
 
     return lista_faturas
 
