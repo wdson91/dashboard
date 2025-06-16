@@ -221,7 +221,12 @@ class StatsView(APIView):
                 contagem_produtos[item.nome] += item.quantidade
 
         # Transformar em lista de dicionários
-        produtos = [{"produto": nome, "quantidade": qtd} for nome, qtd in contagem_produtos.items()]
+        produtos = sorted(
+    [{"produto": nome, "quantidade": qtd} for nome, qtd in contagem_produtos.items()],
+    key=lambda x: x["quantidade"],
+    reverse=True
+)
+
 
         
         # Agrupar vendas por dia
