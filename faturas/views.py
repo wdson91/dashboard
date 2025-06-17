@@ -19,6 +19,7 @@ from .forms import ProfileForm
 from io import BytesIO
 from PIL import Image
 import tempfile
+from django.utils import timezone
 from rest_framework.permissions import AllowAny
 
 class FaturaListCreateView(generics.ListCreateAPIView):
@@ -309,17 +310,23 @@ class StatsHojeView(APIView):
             for hora in sorted(horas_resultado)
         ]
 
+        agora = timezone.now()
+        faturas.update(ultima_atualizacao=agora)
+
 
         return Response({
-        "dados": {
-            "total_vendas": round(total_vendas, 2),
-            "total_itens": total_itens,
-            "vendas_por_dia": [{"data": str(hoje), "total": round(total_vendas, 2)}],
-            "vendas_por_hora": vendas_horarias,
-            "vendas_por_produto": produtos,
-            "quantidade_faturas": faturas.count(),
-            "filtro_data": str(hoje),
-        }
+            "dados": {
+                "total_vendas": round(total_vendas, 2),
+                "total_itens": total_itens,
+                "vendas_por_dia": [{"data": str(hoje), "total": round(total_vendas, 2)}],
+                "vendas_por_hora": vendas_horarias,
+                "vendas_por_produto": produtos,
+                "quantidade_faturas": faturas.count(),
+                "filtro_data": str(hoje),
+                "ultima_atualizacao": agora.strftime("%H:%M")
+
+
+            }
         })
 
 @login_required

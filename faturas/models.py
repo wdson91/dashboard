@@ -14,6 +14,7 @@ class Fatura(models.Model):
     qrcode = models.TextField(blank=True, null=True)  # conteúdo textual do QR code
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    ultima_atualizacao = models.DateTimeField(blank=True, null=True)  # <--- novo campo
 
     class Meta:
         ordering = ['-data', '-hora']
