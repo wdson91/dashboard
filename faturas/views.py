@@ -311,6 +311,7 @@ class StatsHojeView(APIView):
 
 
         return Response({
+        "dados": {
             "total_vendas": round(total_vendas, 2),
             "total_itens": total_itens,
             "vendas_por_dia": [{"data": str(hoje), "total": round(total_vendas, 2)}],
@@ -318,7 +319,9 @@ class StatsHojeView(APIView):
             "vendas_por_produto": produtos,
             "quantidade_faturas": faturas.count(),
             "filtro_data": str(hoje),
+        }
         })
+
 @login_required
 def index(request):
     return render(request, 'faturas/index.html')
