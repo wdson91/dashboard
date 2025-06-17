@@ -239,10 +239,25 @@ class StatsView(APIView):
             [{"data": data, "total": total} for data, total in vendas_por_dia.items()],
             key=lambda x: x["data"]
 )
+        
+
+         # Agrupar vendas por hora (baseado em campo 'hora')
+        vendas_por_hora = defaultdict(float)
+        for fatura in faturas:
+            hora_formatada = fatura.hora.strftime("%H:00")  # ex: '14:00'
+            vendas_por_hora[hora_formatada] += float(fatura.total)
+
+        vendas_horarias = sorted(
+            [{"hora": hora, "total": total} for hora, total in vendas_por_hora.items()],
+            key=lambda x: x["hora"]
+        )
+
+
         return Response({
             "total_vendas": round(total_vendas, 2),
             "total_itens": total_itens,
             "vendas_por_dia": vendas,
+            "vendas_por_hora": vendas_horarias,
             "vendas_por_produto": produtos,
             "quantidade_faturas": faturas.count(),
             "filtro_data_inicio": data_inicio,
