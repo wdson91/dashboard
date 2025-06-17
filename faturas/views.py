@@ -229,65 +229,64 @@ class StatsView(APIView):
 
 
         
-        # Agrupar vendas por dia
+            # Agrupar vendas por dia
         vendas_por_dia = defaultdict(float)
         for fatura in faturas:
             vendas_por_dia[str(fatura.data)] += float(fatura.total)
 
-        # Ordenar por data
-        vendas_por_dia = dict(sorted(vendas_por_dia.items()))
-
+        # Transformar em lista de dicionários e ordenar por data
+        vendas = sorted(
+            [{"data": data, "total": total} for data, total in vendas_por_dia.items()],
+            key=lambda x: x["data"]
+)
         return Response({
             "total_vendas": round(total_vendas, 2),
             "total_itens": total_itens,
-            "vendas_por_dia": vendas_por_dia,
+            "vendas_por_dia": vendas,
             "vendas_por_produto": produtos,
             "quantidade_faturas": faturas.count(),
             "filtro_data_inicio": data_inicio,
             "filtro_data_fim": data_fim,
         })
 
-         # Só tenta fazer o parse se for string válida
-        if isinstance(data_inicio, str) and data_inicio:
-            data_inicio_parsed = parse_date(data_inicio)
-            if data_inicio_parsed:
-                faturas = faturas.filter(data__gte=data_inicio_parsed)
+       
+class StatsHojeView(APIView):
+    permission_classes = [AllowAny]
 
-        if isinstance(data_fim, str) and data_fim:
-            data_fim_parsed = parse_date(data_fim)
-            if data_fim_parsed:
-                faturas = faturas.filter(data__lte=data_fim_parsed)
+    def get(self, request, *args, **kwargs):
+        hoje = date.today()
+
+        # Filtra faturas apenas da data de hoje
+        faturas = Fatura.objects.filter(data=hoje)
 
         total_vendas = sum(fatura.total for fatura in faturas)
         total_itens = sum(
-            item.quantidade 
-            for fatura in faturas 
+            item.quantidade
+            for fatura in faturas
             for item in fatura.itens.all()
         )
 
-        produtos = {}
+        contagem_produtos = defaultdict(int)
         for fatura in faturas:
             for item in fatura.itens.all():
-                produtos[item.nome] = produtos.get(item.nome, 0) + item.quantidade
-        
-        # Agrupar vendas por dia
-        vendas_por_dia = defaultdict(float)
-        for fatura in faturas:
-            vendas_por_dia[str(fatura.data)] += float(fatura.total)
+                contagem_produtos[item.nome] += item.quantidade
 
-        # Ordenar por data
-        vendas_por_dia = dict(sorted(vendas_por_dia.items()))
+        produtos = sorted(
+            [{"produto": nome, "quantidade": qtd} for nome, qtd in contagem_produtos.items()],
+            key=lambda x: x["quantidade"],
+            reverse=True
+        )
+
+        vendas_por_dia = {str(hoje): float(total_vendas)}
 
         return Response({
             "total_vendas": round(total_vendas, 2),
             "total_itens": total_itens,
-            "vendas_por_dia": vendas_por_dia,
+            "vendas_por_dia": [{"data": str(hoje), "total": round(total_vendas, 2)}],
             "vendas_por_produto": produtos,
             "quantidade_faturas": faturas.count(),
-            "filtro_data_inicio": data_inicio,
-            "filtro_data_fim": data_fim,
+            "filtro_data": str(hoje),
         })
-
 @login_required
 def index(request):
     return render(request, 'faturas/index.html')

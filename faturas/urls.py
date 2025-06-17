@@ -5,7 +5,8 @@ from .views import (
     FaturaPDFView,
     StatsView,
     index,
-    faturas
+    faturas,
+    StatsHojeView
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -16,7 +17,8 @@ urlpatterns = [
     path('api/upload/', UploadFaturaView.as_view(), name='upload-fatura'),
     path('api/faturas/<slug:numero>/pdf/', FaturaPDFView.as_view(), name='fatura-pdf'),
     path('api/stats/', StatsView.as_view(), name='stats'),
-    path("faturas",faturas,name="faturas" )
+    path("faturas",faturas,name="faturas" ),
+    path('api/stats/today', StatsHojeView.as_view(), name='stats'),
 ]
 
 if settings.DEBUG:
