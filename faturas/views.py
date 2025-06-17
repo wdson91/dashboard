@@ -19,6 +19,7 @@ from .forms import ProfileForm
 from io import BytesIO
 from PIL import Image
 import tempfile
+from django.core.cache import cache
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
 
@@ -272,19 +273,27 @@ class StatsHojeView(APIView):
     def get(self, request, *args, **kwargs):
         hoje = date.today()
 
-        # Filtra faturas apenas da data de hoje
+        cache_key = f"stats_hoje_{hoje}"
+        cache_ttl = 120  # 2 minutos
+
+        # Verifica se tem cache
+        dados_cache = cache.get(cache_key)
+        if dados_cache:
+            return Response(dados_cache)
+
+        # Recalcula
         faturas = Fatura.objects.filter(data=hoje)
 
-        total_vendas = sum(fatura.total for fatura in faturas)
+        total_vendas = sum(f.total for f in faturas)
         total_itens = sum(
             item.quantidade
-            for fatura in faturas
-            for item in fatura.itens.all()
+            for f in faturas
+            for item in f.itens.all()
         )
 
         contagem_produtos = defaultdict(int)
-        for fatura in faturas:
-            for item in fatura.itens.all():
+        for f in faturas:
+            for item in f.itens.all():
                 contagem_produtos[item.nome] += item.quantidade
 
         produtos = sorted(
@@ -293,18 +302,12 @@ class StatsHojeView(APIView):
             reverse=True
         )
 
-        vendas_por_dia = {str(hoje): float(total_vendas)}
-       # Inicializa horários de 09:00 até 18:00 com total 0.0
-        # Armazena vendas reais
         vendas_por_hora_real = defaultdict(float)
-        for fatura in faturas:
-            hora_formatada = fatura.hora.strftime("%H:00")
-            vendas_por_hora_real[hora_formatada] += float(fatura.total)
+        for f in faturas:
+            hora_formatada = f.hora.strftime("%H:00")
+            vendas_por_hora_real[hora_formatada] += float(f.total)
 
-        # Sempre incluir 08:00 e 18:00, mesmo que não haja venda
         horas_resultado = {"08:00", "12:00", "18:00"} | set(vendas_por_hora_real.keys())
-
-        # Monta lista final, incluindo apenas os horários relevantes
         vendas_horarias = [
             {"hora": hora, "total": round(vendas_por_hora_real.get(hora, 0.0), 2)}
             for hora in sorted(horas_resultado)
@@ -313,8 +316,7 @@ class StatsHojeView(APIView):
         agora = timezone.now()
         faturas.update(ultima_atualizacao=agora)
 
-
-        return Response({
+        resultado = {
             "dados": {
                 "total_vendas": round(total_vendas, 2),
                 "total_itens": total_itens,
@@ -323,12 +325,14 @@ class StatsHojeView(APIView):
                 "vendas_por_produto": produtos,
                 "quantidade_faturas": faturas.count(),
                 "filtro_data": str(hoje),
-                "ultima_atualizacao": agora.strftime("%H:%M")
-
-
+                "ultima_atualizacao": agora.strftime("%H:%M"),
             }
-        })
+        }
 
+        # Armazena no cache por 2 minutos
+        cache.set(cache_key, resultado, timeout=cache_ttl)
+
+        return Response(resultado)
 @login_required
 def index(request):
     return render(request, 'faturas/index.html')
