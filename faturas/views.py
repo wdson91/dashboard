@@ -293,15 +293,21 @@ class StatsHojeView(APIView):
         )
 
         vendas_por_dia = {str(hoje): float(total_vendas)}
-        vendas_por_hora = defaultdict(float)
-        for fatura in faturas:
-            hora_formatada = fatura.hora.strftime("%H:00")  # ex: '14:00'
-            vendas_por_hora[hora_formatada] += float(fatura.total)
+       # Inicializa horários de 09:00 até 18:00 com total 0.0
+        vendas_por_hora = {f"{h:02d}:00": 0.0 for h in range(9, 19)}
 
-        vendas_horarias = sorted(
-            [{"hora": hora, "total": total} for hora, total in vendas_por_hora.items()],
-            key=lambda x: x["hora"]
-        )
+        # Soma os totais reais das faturas dentro desse intervalo
+        for fatura in faturas:
+            hora_formatada = fatura.hora.strftime("%H:00")
+            if hora_formatada in vendas_por_hora:
+                vendas_por_hora[hora_formatada] += float(fatura.total)
+
+        # Converte para lista ordenada
+        vendas_horarias = [
+            {"hora": hora, "total": round(total, 2)}
+            for hora, total in sorted(vendas_por_hora.items())
+        ]
+
 
         return Response({
             "total_vendas": round(total_vendas, 2),
