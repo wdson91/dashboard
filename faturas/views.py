@@ -22,6 +22,7 @@ import tempfile
 from django.core.cache import cache
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
+from pytz import timezone as pytz_timezone
 
 class FaturaListCreateView(generics.ListCreateAPIView):
     serializer_class = FaturaSerializer
@@ -313,7 +314,12 @@ class StatsHojeView(APIView):
             for hora in sorted(horas_resultado)
         ]
 
-        agora = timezone.now()
+
+        # Atualiza a última atualização 
+        # para o momento atual com timezone lisboa 
+
+        agora = timezone.now().astimezone(pytz_timezone("Europe/Lisbon"))        
+        print(f"Atualizando estatísticas para hoje: {hoje} às {agora.strftime('%H:%M')}")
         faturas.update(ultima_atualizacao=agora)
 
          # Faturas dos últimos 7 dias até ontem
