@@ -553,9 +553,9 @@ def faturas_por_mes_view(request):
         mes_nome = MESES_PT[mes_num]
         vendas_por_mes_formatado.append({
             "mes":mes_nome,
-            f"total_{ano_atual}": round(totais_por_ano[ano_atual].get(mes_nome, 0), 2),
-            f"total_{ano_passado}": round(totais_por_ano[ano_passado].get(mes_nome, 0), 2),
-            f"faturas_{ano_atual}": faturas_por_mes_ano_atual.get(mes_nome, 0)
+            f"total_ano_atual": round(totais_por_ano[ano_atual].get(mes_nome, 0), 2),
+            f"total_ano_passado": round(totais_por_ano[ano_passado].get(mes_nome, 0), 2),
+            f"faturas_ano_atual": faturas_por_mes_ano_atual.get(mes_nome, 0)
         })
 
     response = [{
