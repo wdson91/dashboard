@@ -23,6 +23,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
 from pytz import timezone as pytz_timezone
+import requests
 
 class FaturaListCreateView(generics.ListCreateAPIView):
     serializer_class = FaturaSerializer
@@ -105,6 +106,18 @@ class UploadFaturaView(APIView):
             faturas_criadas.append(fatura)
 
         serializer = FaturaSerializer(faturas_criadas, many=True)
+
+        #chamada para atualizar o cache do n8n
+
+        n8n_url = 'https://novoprojeto-n8n.aidvjr.easypanel.host/webhook/reset-cache'
+        
+        try:        
+            response = requests.get(n8n_url)
+            if response.status_code != 200:
+                erros.append({'erro': 'Falha ao atualizar o cache no n8n'})
+        except requests.RequestException as e:
+            erros.append({'erro': f'Erro ao conectar com o n8n: {str(e)}'})
+
         return Response({
             'mensagem': f'{len(faturas_criadas)} fatura(s) salva(s) com sucesso',
             'faturas': serializer.data,
