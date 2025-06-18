@@ -3,6 +3,8 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from fpdf import FPDF
+from calendar import month_name
+
 from django.utils.dateparse import parse_date
 from io import BytesIO
 from django.http import FileResponse
@@ -505,6 +507,14 @@ def faturas_agrupadas_view(request):
 from django.db.models.functions import TruncMonth
 from datetime import datetime
 from collections import defaultdict
+import locale
+
+
+MESES_PT = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+}
 
 def faturas_por_mes_view(request):
     hoje = timezone.localdate()
@@ -512,10 +522,8 @@ def faturas_por_mes_view(request):
     ano_atual = hoje.year
     ano_passado = ano_atual - 1
 
-    # Filtrar faturas dos dois anos
     faturas_dois_anos = Fatura.objects.filter(data__year__in=[ano_atual, ano_passado])
 
-    # Agrupar por mês e ano
     faturas_por_mes = (
         faturas_dois_anos
         .annotate(mes=TruncMonth('data'))
@@ -526,31 +534,28 @@ def faturas_por_mes_view(request):
         )
     )
 
-    # Inicializar dicionários
     totais_por_ano = defaultdict(lambda: defaultdict(float))
     faturas_por_mes_ano_atual = defaultdict(int)
 
     for item in faturas_por_mes:
         data_mes = item['mes']
-        mes_str = data_mes.strftime("%m")
+        mes_num = data_mes.month
+        mes_nome = MESES_PT[mes_num]
         ano = data_mes.year
         total = float(item['total'])
 
-        totais_por_ano[ano][mes_str] += total
+        totais_por_ano[ano][mes_nome] += total
         if ano == ano_atual:
-            faturas_por_mes_ano_atual[mes_str] += item['quantidade']
+            faturas_por_mes_ano_atual[mes_nome] += item['quantidade']
 
-    # Lista de todos os meses do ano (1 a 12 como strings "01", ..., "12")
-    meses_ano = [f"{m:02}" for m in range(1, 13)]
-
-    # Montar estrutura final
     vendas_por_mes_formatado = []
-    for mes in meses_ano:
+    for mes_num in range(1, 13):
+        mes_nome = MESES_PT[mes_num]
         vendas_por_mes_formatado.append({
-            "mes": mes,
-            f"total_ano_atual": round(totais_por_ano[ano_atual].get(mes, 0), 2),
-            f"total_ano_passado": round(totais_por_ano[ano_passado].get(mes, 0), 2),
-            f"faturas_ano_atual": faturas_por_mes_ano_atual.get(mes, 0)
+            "mes":mes_nome,
+            f"total_{ano_atual}": round(totais_por_ano[ano_atual].get(mes_nome, 0), 2),
+            f"total_{ano_passado}": round(totais_por_ano[ano_passado].get(mes_nome, 0), 2),
+            f"faturas_{ano_atual}": faturas_por_mes_ano_atual.get(mes_nome, 0)
         })
 
     response = [{
