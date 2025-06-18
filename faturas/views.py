@@ -380,3 +380,107 @@ def faturas(request):
     
     return render(request, "faturas/faturas.html")
 
+
+
+from django.db.models import Sum, Count, F, ExpressionWrapper, DecimalField, Value as V
+from django.db.models.functions import TruncHour, Coalesce
+from django.utils import timezone
+from datetime import timedelta, time
+from django.http import JsonResponse
+from .models import Fatura, ItemFatura
+
+
+
+def faturas_agrupadas_view(request):
+    hoje = timezone.localdate()
+    agora = timezone.now().astimezone(timezone.get_current_timezone())
+    sete_dias_atras = hoje - timedelta(days=7)
+
+    # Faturas de hoje e dos últimos 7 dias
+    faturas_hoje = Fatura.objects.filter(data=hoje)
+    faturas_7_dias = Fatura.objects.filter(data__range=[sete_dias_atras, hoje - timedelta(days=1)])
+
+    quantidade_faturas = faturas_hoje.count()
+    quantidade_faturas_7_dias = faturas_7_dias.count()
+
+    total_vendas = faturas_hoje.aggregate(
+        total=Coalesce(Sum('total'), V(0, output_field=DecimalField()))
+    )['total']
+
+    # Agrupamento por hora (hoje)
+    faturas_hoje_por_hora = (
+        faturas_hoje
+        .annotate(hora_truncada=TruncHour('hora'))
+        .values('hora_truncada')
+        .annotate(
+            total=Coalesce(Sum('total'), V(0, output_field=DecimalField()))
+        )
+    )
+
+    totais_hoje = {
+        fh['hora_truncada'].strftime("%H:%M"): float(fh['total']) for fh in faturas_hoje_por_hora
+    }
+
+    # Agrupamento por hora (últimos 7 dias)
+    faturas_7dias_por_hora = (
+        faturas_7_dias
+        .annotate(hora_truncada=TruncHour('hora'))
+        .values('hora_truncada')
+        .annotate(
+            total=Coalesce(Sum('total'), V(0, output_field=DecimalField()))
+        )
+    )
+
+    totais_7_dias = {
+        fh['hora_truncada'].strftime("%H:%M"): float(fh['total']) for fh in faturas_7dias_por_hora
+    }
+
+    # Horas fixas
+    horas_dia = [time(h, 0).strftime("%H:%M") for h in range(8, 19)]
+
+    vendas_por_hora_formatado = []
+    for hora in horas_dia:
+        vendas_por_hora_formatado.append({
+            "hora": hora,
+            "total": round(totais_hoje.get(hora, 0), 2),
+            "total_7_dias": round(totais_7_dias.get(hora, 0), 2)
+        })
+
+    # Vendas por dia (hoje)
+    vendas_por_dia = [{
+        "data": hoje.strftime("%Y-%m-%d"),
+        "total": round(float(total_vendas), 2)
+    }]
+
+    # Vendas últimos 7 dias (por data)
+    vendas_7_dias = (
+        faturas_7_dias
+        .values('data')
+        .annotate(total=Coalesce(Sum('total'), V(0, output_field=DecimalField())))
+        .order_by('data')
+    )
+
+    ultimos_7_dias = [{
+        "data": v["data"].strftime("%Y-%m-%d"),
+        "total": round(float(v["total"]), 2)
+    } for v in vendas_7_dias]
+
+    total_ultimos_7_dias = round(sum(v["total"] for v in ultimos_7_dias), 2)
+
+    ultima_atualizacao = agora.strftime("%H:%M")
+
+    response = [{
+        "dados": {
+            "total_vendas": round(float(total_vendas), 2),
+            "quantidade_faturas": quantidade_faturas,
+            "vendas_por_dia": vendas_por_dia,
+            "vendas_por_hora": vendas_por_hora_formatado,
+            "filtro_data": hoje.strftime("%Y-%m-%d"),
+            "ultima_atualizacao": ultima_atualizacao,
+            "ultimos_7_dias": ultimos_7_dias,
+            "total_ultimos_7_dias": total_ultimos_7_dias,
+            "quantidade_faturas_7_dias": quantidade_faturas_7_dias,
+        }
+    }]
+
+    return JsonResponse(response, safe=False)

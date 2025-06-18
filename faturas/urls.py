@@ -6,7 +6,8 @@ from .views import (
     StatsView,
     index,
     faturas,
-    StatsHojeView
+    StatsHojeView,
+    faturas_agrupadas_view,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -18,7 +19,8 @@ urlpatterns = [
     path('api/faturas/<slug:numero>/pdf/', FaturaPDFView.as_view(), name='fatura-pdf'),
     path('api/stats/', StatsView.as_view(), name='stats'),
     path("faturas",faturas,name="faturas" ),
-    path('api/stats/today', StatsHojeView.as_view(), name='stats'),
+    path('api/stats/today', StatsHojeView.as_view(), name='stats-hoje'),
+    path('api/stats/report', faturas_agrupadas_view, name='stats-report'),
 ]
 
 if settings.DEBUG:
