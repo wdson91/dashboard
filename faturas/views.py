@@ -278,8 +278,8 @@ class StatsHojeView(APIView):
 
         # Verifica se tem cache
         dados_cache = cache.get(cache_key)
-        if dados_cache:
-            return Response(dados_cache)
+        #if dados_cache:
+            #return Response(dados_cache)
 
         # Recalcula
         faturas = Fatura.objects.filter(data=hoje)
@@ -316,6 +316,21 @@ class StatsHojeView(APIView):
         agora = timezone.now()
         faturas.update(ultima_atualizacao=agora)
 
+         # Faturas dos últimos 7 dias até ontem
+        ontem = hoje - timedelta(days=1)
+        sete_dias_atras = hoje - timedelta(days=7)
+        faturas_7_dias = Fatura.objects.filter(data__range=(sete_dias_atras, ontem))
+
+        vendas_ultimos_7_dias = defaultdict(float)
+        for f in faturas_7_dias:
+            vendas_ultimos_7_dias[f.data.strftime("%Y-%m-%d")] += float(f.total)
+
+        vendas_por_dia_ultimos_7 = [
+            {"data": data, "total": round(total, 2)}
+            for data, total in sorted(vendas_ultimos_7_dias.items())
+        ]
+        total_ultimos_7_dias = round(sum(f.total for f in faturas_7_dias), 2)
+       
         resultado = {
             "dados": {
                 "total_vendas": round(total_vendas, 2),
@@ -326,8 +341,11 @@ class StatsHojeView(APIView):
                 "quantidade_faturas": faturas.count(),
                 "filtro_data": str(hoje),
                 "ultima_atualizacao": agora.strftime("%H:%M"),
+                "ultimos_7_dias": vendas_por_dia_ultimos_7,
+                "total_ultimos_7_dias": total_ultimos_7_dias,
             }
         }
+
 
         # Armazena no cache por 2 minutos
         cache.set(cache_key, resultado, timeout=cache_ttl)
