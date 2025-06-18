@@ -8,6 +8,7 @@ from .views import (
     faturas,
     StatsHojeView,
     faturas_agrupadas_view,
+    faturas_por_mes_view
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -21,6 +22,7 @@ urlpatterns = [
     path("faturas",faturas,name="faturas" ),
     path('api/stats/today', StatsHojeView.as_view(), name='stats-hoje'),
     path('api/stats/report', faturas_agrupadas_view, name='stats-report'),
+    path('api/stats/month', faturas_por_mes_view, name='stats-month'),
 ]
 
 if settings.DEBUG:

@@ -445,11 +445,12 @@ def faturas_agrupadas_view(request):
     }
 
     # Lista fixa de horas (08:00 às 18:00)
-    horas_dia = [time(h, 0).strftime("%H:%M") for h in range(8, 19)]
+    # Conjunto de horas únicas com dados de hoje e dos últimos 7 dias
+    horas_com_dados = set(totais_hoje.keys()) | set(totais_7_dias.keys())
 
-    # Construção final por hora
+    # Construção final apenas com horas que têm dados
     vendas_por_hora_formatado = []
-    for hora in horas_dia:
+    for hora in sorted(horas_com_dados):
         vendas_por_hora_formatado.append({
             "hora": hora,
             "faturas_hoje": totais_hoje.get(hora, {}).get("quantidade", 0),
@@ -457,6 +458,7 @@ def faturas_agrupadas_view(request):
             "faturas_7_dias": totais_7_dias.get(hora, {}).get("quantidade", 0),
             "volume_7_dias": round(totais_7_dias.get(hora, {}).get("volume", 0), 2)
         })
+
 
     # Vendas por dia (hoje)
     vendas_por_dia = [{
@@ -492,6 +494,70 @@ def faturas_agrupadas_view(request):
             "ultimos_7_dias": ultimos_7_dias,
             "total_ultimos_7_dias": total_ultimos_7_dias,
             "quantidade_faturas_7_dias": quantidade_faturas_7_dias,
+        }
+    }]
+
+    return JsonResponse(response, safe=False)
+
+
+
+
+from django.db.models.functions import TruncMonth
+from datetime import datetime
+from collections import defaultdict
+
+def faturas_por_mes_view(request):
+    hoje = timezone.localdate()
+    agora = timezone.now().astimezone(timezone.get_current_timezone())
+    ano_atual = hoje.year
+    ano_passado = ano_atual - 1
+
+    # Filtrar faturas dos dois anos
+    faturas_dois_anos = Fatura.objects.filter(data__year__in=[ano_atual, ano_passado])
+
+    # Agrupar por mês e ano
+    faturas_por_mes = (
+        faturas_dois_anos
+        .annotate(mes=TruncMonth('data'))
+        .values('mes')
+        .annotate(
+            total=Coalesce(Sum('total'), V(0, output_field=DecimalField())),
+            quantidade=Count('id')
+        )
+    )
+
+    # Inicializar dicionários
+    totais_por_ano = defaultdict(lambda: defaultdict(float))
+    faturas_por_mes_ano_atual = defaultdict(int)
+
+    for item in faturas_por_mes:
+        data_mes = item['mes']
+        mes_str = data_mes.strftime("%m")
+        ano = data_mes.year
+        total = float(item['total'])
+
+        totais_por_ano[ano][mes_str] += total
+        if ano == ano_atual:
+            faturas_por_mes_ano_atual[mes_str] += item['quantidade']
+
+    # Lista de todos os meses do ano (1 a 12 como strings "01", ..., "12")
+    meses_ano = [f"{m:02}" for m in range(1, 13)]
+
+    # Montar estrutura final
+    vendas_por_mes_formatado = []
+    for mes in meses_ano:
+        vendas_por_mes_formatado.append({
+            "mes": mes,
+            f"total_ano_atual": round(totais_por_ano[ano_atual].get(mes, 0), 2),
+            f"total_ano_passado": round(totais_por_ano[ano_passado].get(mes, 0), 2),
+            f"faturas_ano_atual": faturas_por_mes_ano_atual.get(mes, 0)
+        })
+
+    response = [{
+        "dados": {
+            "vendas_por_mes": vendas_por_mes_formatado,
+            "filtro_ano": ano_atual,
+            "ultima_atualizacao": agora.strftime("%H:%M"),
         }
     }]
 
