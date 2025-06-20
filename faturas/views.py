@@ -369,7 +369,7 @@ class StatsHojeView(APIView):
 
 
         # Armazena no cache por 2 minutos
-        cache.set(cache_key, resultado, timeout=cache_ttl)
+        #cache.set(cache_key, resultado, timeout=cache_ttl)
 
         return Response(resultado)
 @login_required
