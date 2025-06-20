@@ -289,11 +289,11 @@ class StatsHojeView(APIView):
     def get(self, request, *args, **kwargs):
         hoje = date.today()
 
-        cache_key = f"stats_hoje_{hoje}"
-        cache_ttl = 120  # 2 minutos
+        #cache_key = f"stats_hoje_{hoje}"
+        #cache_ttl = 120  # 2 minutos
 
         # Verifica se tem cache
-        dados_cache = cache.get(cache_key)
+        #dados_cache = cache.get(cache_key)
         #if dados_cache:
             #return Response(dados_cache)
 
