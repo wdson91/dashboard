@@ -193,12 +193,15 @@ def edit_profile(request):
 
 class StatsView(APIView):
    
+
+    
     permission_classes = [AllowAny]  # <-- adiciona isso
 
     def get(self, request, *args, **kwargs):
         data_inicio = request.query_params.get("data_inicio")
         data_fim = request.query_params.get("data_fim")
-
+        print(request)
+        return
         # Se não vier filtro, usa o mês atual
         if not data_inicio or not data_fim:
             hoje = date.today()
